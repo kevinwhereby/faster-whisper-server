@@ -186,8 +186,8 @@ class Config(BaseSettings):
 
     api_key: str | None = None
     log_level: str = "debug"
-    host: str = Field(alias="UVICORN_HOST", default="0.0.0.0")
-    port: int = Field(alias="UVICORN_PORT", default=8000)
+    host: str = Field(alias="UVICORN_HOST", default="127.0.0.1")
+    port: int = Field(alias="UVICORN_PORT", default=8080)
     allow_origins: list[str] | None = None
     """
     https://docs.pydantic.dev/latest/concepts/pydantic_settings/#parsing-environment-variable-values
