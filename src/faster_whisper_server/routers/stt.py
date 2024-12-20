@@ -231,6 +231,7 @@ def translate_file(
             temperature=temperature,
             vad_filter=vad_filter,
         )
+        print(f"Segments {segments}")
         segments = TranscriptionSegment.from_faster_whisper_segments(segments)
 
         if stream:
@@ -280,15 +281,6 @@ def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-    print(f"config: {config}")
-    print(f"request: {request}")
-    print(f"audio: {audio}")
-    print(f"model: {model}")
-    print(f"language: {language}")
-    print(f"response_format: {response_format}")
-    print(f"stream: {stream}")
-    print(f"hotwords: {hotwords}")
-    print(f"vad_filter: {vad_filter}")
     if model is None:
         model = config.whisper.model
     if language is None:
