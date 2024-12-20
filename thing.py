@@ -10,7 +10,7 @@ def transcribe_file(
     # Create multipart form data
     files = {
         # Use actual filename and open file in binary mode
-        "audio": (Path(file_path).name, open(file_path, "rb"), "audio/raw")
+        "audio": (Path(file_path).name, open(file_path, "rb"), "audio/x-raw")
     }
     print("Files being sent:", files)
 
