@@ -12,6 +12,7 @@ def transcribe_file(
         # Use actual filename and open file in binary mode
         "audio": (Path(file_path).name, open(file_path, "rb"), "audio/raw")
     }
+    print("Files being sent:", files)
 
     # Create form data dictionary
     form_data = {}
