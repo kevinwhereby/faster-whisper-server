@@ -73,6 +73,7 @@ def audio_file_dependency(
     try:
         audio = decode_audio(file.file)
     except av.error.InvalidDataError as e:
+        print(f"Error {e}")
         raise HTTPException(
             status_code=415,
             detail="Failed to decode audio. The provided file type is not supported.",
