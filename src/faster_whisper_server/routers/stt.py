@@ -313,7 +313,7 @@ def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-    print(f"Config:")
+    print(f"Config: {config}")
     if model is None:
         model = config.whisper.model
     if language is None:
