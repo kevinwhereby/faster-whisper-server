@@ -75,7 +75,7 @@ def audio_file_dependency(
         binary = file.file.read()
         bytes = BytesIO(binary)
         bytes.seek(0)
-        audio = np.frombuffer(bytes.getbuffer(), dtype=np.float32)
+        audio = np.frombuffer(bytes.getbuffer(), dtype=np.int16)
         audio = audio.astype(np.float32) / 32768.0
     except av.error.InvalidDataError as e:
         print(f"Error {e}, {file}")
