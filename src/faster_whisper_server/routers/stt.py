@@ -214,6 +214,7 @@ def translate_file(
     stream: Annotated[bool, Form()] = False,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
+    print(f"Audio shape {audio.shape}")
     if model is None:
         model = config.whisper.model
     if response_format is None:
