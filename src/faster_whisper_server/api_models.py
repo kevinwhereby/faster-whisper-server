@@ -4,7 +4,13 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from faster_whisper_server.text_utils import Transcription, canonicalize_word, segments_to_text
+from faster_whisper_server.text_utils import (
+    Transcription,
+    canonicalize_word,
+    segments_to_text,
+)
+
+from faster_whisper_server.timing import timing
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -20,7 +26,9 @@ class TranscriptionWord(BaseModel):
     probability: float
 
     @classmethod
-    def from_segments(cls, segments: Iterable[TranscriptionSegment]) -> list[TranscriptionWord]:
+    def from_segments(
+        cls, segments: Iterable[TranscriptionSegment]
+    ) -> list[TranscriptionWord]:
         words: list[TranscriptionWord] = []
         for segment in segments:
             # NOTE: a temporary "fix" for https://github.com/fedirz/faster-whisper-server/issues/58.
@@ -36,9 +44,15 @@ class TranscriptionWord(BaseModel):
         self.end += seconds
 
     @classmethod
-    def common_prefix(cls, a: list[TranscriptionWord], b: list[TranscriptionWord]) -> list[TranscriptionWord]:
+    def common_prefix(
+        cls, a: list[TranscriptionWord], b: list[TranscriptionWord]
+    ) -> list[TranscriptionWord]:
         i = 0
-        while i < len(a) and i < len(b) and canonicalize_word(a[i].word) == canonicalize_word(b[i].word):
+        while (
+            i < len(a)
+            and i < len(b)
+            and canonicalize_word(a[i].word) == canonicalize_word(b[i].word)
+        ):
             i += 1
         return a[:i]
 
@@ -56,6 +70,11 @@ class TranscriptionSegment(BaseModel):
     compression_ratio: float
     no_speech_prob: float
     words: list[TranscriptionWord] | None
+    model_config = ConfigDict(
+        frozen=True,  # Make immutable
+        validate_assignment=False,  # Skip validation for better performance
+        extra="ignore",  # Ignore extra fields
+    )
 
     @classmethod
     def from_faster_whisper_segments(
@@ -73,32 +92,41 @@ class TranscriptionSegment(BaseModel):
                 avg_logprob=segment.avg_logprob,
                 compression_ratio=segment.compression_ratio,
                 no_speech_prob=segment.no_speech_prob,
-                words=[
-                    TranscriptionWord(
-                        start=word.start,
-                        end=word.end,
-                        word=word.word,
-                        probability=word.probability,
-                    )
-                    for word in segment.words
-                ]
-                if segment.words is not None
-                else None,
+                words=(
+                    [
+                        TranscriptionWord(
+                            start=word.start,
+                            end=word.end,
+                            word=word.word,
+                            probability=word.probability,
+                        )
+                        for word in segment.words
+                    ]
+                    if segment.words is not None
+                    else None
+                ),
             )
 
 
 # https://platform.openai.com/docs/api-reference/audio/json-object
 # https://github.com/openai/openai-openapi/blob/master/openapi.yaml#L10924
+
+
 class CreateTranscriptionResponseJson(BaseModel):
+    model_config = ConfigDict(frozen=True, validate_assignment=False, extra="ignore")
     text: str
 
     @classmethod
-    def from_segments(cls, segments: list[TranscriptionSegment]) -> CreateTranscriptionResponseJson:
-        return cls(text=segments_to_text(segments))
+    def from_segments(cls, segments: Iterable[TranscriptionSegment]) -> Self:
+        result = cls(text=segments_to_text(segments))
+        return result
 
     @classmethod
-    def from_transcription(cls, transcription: Transcription) -> CreateTranscriptionResponseJson:
-        return cls(text=transcription.text)
+    def from_transcription(
+        cls, transcription: Transcription
+    ) -> CreateTranscriptionResponseJson:
+        result = cls(text=transcription.text)
+        return result
 
 
 # https://platform.openai.com/docs/api-reference/audio/verbose-json-object
@@ -113,32 +141,44 @@ class CreateTranscriptionResponseVerboseJson(BaseModel):
 
     @classmethod
     def from_segment(
-        cls, segment: TranscriptionSegment, transcription_info: faster_whisper.transcribe.TranscriptionInfo
+        cls,
+        segment: TranscriptionSegment,
+        transcription_info: faster_whisper.transcribe.TranscriptionInfo,
     ) -> CreateTranscriptionResponseVerboseJson:
         return cls(
             language=transcription_info.language,
             duration=segment.end - segment.start,
             text=segment.text,
-            words=segment.words if transcription_info.transcription_options.word_timestamps else None,
+            words=(
+                segment.words
+                if transcription_info.transcription_options.word_timestamps
+                else None
+            ),
             segments=[segment],
         )
 
     @classmethod
     def from_segments(
-        cls, segments: list[TranscriptionSegment], transcription_info: faster_whisper.transcribe.TranscriptionInfo
+        cls,
+        segments: list[TranscriptionSegment],
+        transcription_info: faster_whisper.transcribe.TranscriptionInfo,
     ) -> CreateTranscriptionResponseVerboseJson:
         return cls(
             language=transcription_info.language,
             duration=transcription_info.duration,
             text=segments_to_text(segments),
             segments=segments,
-            words=TranscriptionWord.from_segments(segments)
-            if transcription_info.transcription_options.word_timestamps
-            else None,
+            words=(
+                TranscriptionWord.from_segments(segments)
+                if transcription_info.transcription_options.word_timestamps
+                else None
+            ),
         )
 
     @classmethod
-    def from_transcription(cls, transcription: Transcription) -> CreateTranscriptionResponseVerboseJson:
+    def from_transcription(
+        cls, transcription: Transcription
+    ) -> CreateTranscriptionResponseVerboseJson:
         return cls(
             language="english",  # FIX: hardcoded
             duration=transcription.duration,

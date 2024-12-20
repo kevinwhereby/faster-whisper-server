@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 import logging
+import time
 import platform
+import concurrent.futures
+import os
+import asyncio
 from typing import TYPE_CHECKING
 
 from fastapi import (
@@ -10,7 +14,11 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 
-from faster_whisper_server.dependencies import get_config, get_model_manager, verify_api_key
+from faster_whisper_server.dependencies import (
+    get_config,
+    get_model_manager,
+    verify_api_key,
+)
 from faster_whisper_server.logger import setup_logger
 from faster_whisper_server.routers.list_models import (
     router as list_models_router,
@@ -31,14 +39,6 @@ def create_app() -> FastAPI:
 
     logger = logging.getLogger(__name__)
 
-    if platform.machine() == "x86_64":
-        from faster_whisper_server.routers.speech import (
-            router as speech_router,
-        )
-    else:
-        logger.warning("`/v1/audio/speech` is only supported on x86_64 machines")
-        speech_router = None
-
     config = get_config()  # HACK
     logger.debug(f"Config: {config}")
 
@@ -56,11 +56,28 @@ def create_app() -> FastAPI:
 
     app = FastAPI(lifespan=lifespan, dependencies=dependencies)
 
+    @app.middleware("http")
+    async def add_process_time_header(request: Request, call_next):
+        start_time = time.time()
+        response = await call_next(request)
+        logger.info(
+            "Time took to process the request and return response is {} sec".format(
+                time.time() - start_time
+            )
+        )
+        return response
+
     app.include_router(stt_router)
     app.include_router(list_models_router)
     app.include_router(misc_router)
-    if speech_router is not None:
-        app.include_router(speech_router)
+
+    thread_pool = concurrent.futures.ThreadPoolExecutor(
+        max_workers=8,  # 16 threads for 8 CPUs
+        thread_name_prefix="whisper_worker",
+    )
+
+    loop = asyncio.get_event_loop()
+    loop.set_default_executor(thread_pool)
 
     if config.allow_origins is not None:
         app.add_middleware(
