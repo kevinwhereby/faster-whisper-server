@@ -1,33 +1,37 @@
 import requests
+from pathlib import Path
 
 
 def transcribe_file(
     file_path, model=None, language=None, response_format=None, temperature=None
 ):
-    # URL of your FastAPI endpoint
     url = "http://localhost:8080/v1/audio/transcriptions"
 
-    # Prepare the files and form data
-    files = {"audio": ("audio.wav", open(file_path, "rb"))}
+    # Create multipart form data
+    files = {
+        # Use actual filename and open file in binary mode
+        "audio": (Path(file_path).name, open(file_path, "rb"), "audio/raw")
+    }
 
-    # Prepare form data
-    data = {}
+    # Create form data dictionary
+    form_data = {}
     if model:
-        data["model"] = model
+        form_data["model"] = (None, model)
     if language:
-        data["language"] = language
+        form_data["language"] = (None, language)
     if response_format:
-        data["response_format"] = response_format
+        form_data["response_format"] = (None, response_format)
     if temperature is not None:
-        data["temperature"] = str(temperature)
+        form_data["temperature"] = (None, str(temperature))
+
+    # Merge files and form_data
+    files.update(form_data)
 
     # Make the POST request
-    response = requests.post(url, files=files, data=data)
+    response = requests.post(url, files=files)  # Send everything as files parameter
 
     # Check if request was successful
     response.raise_for_status()
-
-    # Return the JSON response
     return response.json()
 
 
