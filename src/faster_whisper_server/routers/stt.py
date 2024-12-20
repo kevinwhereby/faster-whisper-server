@@ -98,7 +98,7 @@ def audio_file_dependency(
         return audio  # pyright: ignore reportReturnType
 
 
-AudioFileDependency = Annotated[NDArray[float32], Depends(audio_file_dependency)]
+AudioFileDependency = Annotated[NDArray[np.float32], Depends(audio_file_dependency)]
 
 
 def segments_to_response(
