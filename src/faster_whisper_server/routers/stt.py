@@ -281,8 +281,7 @@ def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-        print(f"Audio shape {audio.shape}")
-
+    print(f"Audio shape {audio.shape}")
     if model is None:
         model = config.whisper.model
     if language is None:
