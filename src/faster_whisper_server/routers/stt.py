@@ -23,9 +23,9 @@ from fastapi.websockets import WebSocketState
 from faster_whisper.audio import decode_audio
 from faster_whisper.transcribe import BatchedInferencePipeline
 from faster_whisper.vad import VadOptions, get_speech_timestamps
-from numpy import float32
 from numpy.typing import NDArray
 from pydantic import AfterValidator, Field
+import numpy as np
 
 from faster_whisper_server.api_models import (
     DEFAULT_TIMESTAMP_GRANULARITIES,
@@ -55,6 +55,7 @@ from faster_whisper_server.text_utils import (
 )
 from faster_whisper_server.transcriber import audio_transcriber
 
+
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
@@ -71,7 +72,11 @@ def audio_file_dependency(
     file: Annotated[UploadFile, Form()],
 ) -> NDArray[float32]:
     try:
-        audio = decode_audio(file.file)
+        binary = file.file.read()
+        bytes = BytesIO(binary)
+        bytes.seek(0)
+        audio = np.frombuffer(bytes.getbuffer(), dtype=np.float32)
+        audio = audio.astype(np.float32) / 32768.0
     except av.error.InvalidDataError as e:
         print(f"Error {e}, {file}")
         raise HTTPException(
