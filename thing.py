@@ -35,7 +35,7 @@ def transcribe_file(
 try:
     result = transcribe_file(
         file_path="./talking_about_a_hike.raw",
-        model="whisper-1",
+        model="Systran/faster-whisper-large-v3",
         response_format="json",
         temperature=0.0,
     )
