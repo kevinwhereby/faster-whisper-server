@@ -43,8 +43,16 @@ from faster_whisper_server.config import (
     ResponseFormat,
     Task,
 )
-from faster_whisper_server.dependencies import ConfigDependency, ModelManagerDependency, get_config
-from faster_whisper_server.text_utils import segments_to_srt, segments_to_text, segments_to_vtt
+from faster_whisper_server.dependencies import (
+    ConfigDependency,
+    ModelManagerDependency,
+    get_config,
+)
+from faster_whisper_server.text_utils import (
+    segments_to_srt,
+    segments_to_text,
+    segments_to_vtt,
+)
 from faster_whisper_server.transcriber import audio_transcriber
 
 if TYPE_CHECKING:
@@ -98,21 +106,31 @@ def segments_to_response(
             return Response(segments_to_text(segments), media_type="text/plain")
         case ResponseFormat.JSON:
             return Response(
-                CreateTranscriptionResponseJson.from_segments(segments).model_dump_json(),
+                CreateTranscriptionResponseJson.from_segments(
+                    segments
+                ).model_dump_json(),
                 media_type="application/json",
             )
         case ResponseFormat.VERBOSE_JSON:
             return Response(
-                CreateTranscriptionResponseVerboseJson.from_segments(segments, transcription_info).model_dump_json(),
+                CreateTranscriptionResponseVerboseJson.from_segments(
+                    segments, transcription_info
+                ).model_dump_json(),
                 media_type="application/json",
             )
         case ResponseFormat.VTT:
             return Response(
-                "".join(segments_to_vtt(segment, i) for i, segment in enumerate(segments)), media_type="text/vtt"
+                "".join(
+                    segments_to_vtt(segment, i) for i, segment in enumerate(segments)
+                ),
+                media_type="text/vtt",
             )
         case ResponseFormat.SRT:
             return Response(
-                "".join(segments_to_srt(segment, i) for i, segment in enumerate(segments)), media_type="text/plain"
+                "".join(
+                    segments_to_srt(segment, i) for i, segment in enumerate(segments)
+                ),
+                media_type="text/plain",
             )
 
 
@@ -130,7 +148,9 @@ def segments_to_streaming_response(
             if response_format == ResponseFormat.TEXT:
                 data = segment.text
             elif response_format == ResponseFormat.JSON:
-                data = CreateTranscriptionResponseJson.from_segments([segment]).model_dump_json()
+                data = CreateTranscriptionResponseJson.from_segments(
+                    [segment]
+                ).model_dump_json()
             elif response_format == ResponseFormat.VERBOSE_JSON:
                 data = CreateTranscriptionResponseVerboseJson.from_segment(
                     segment, transcription_info
@@ -151,7 +171,9 @@ def handle_default_openai_model(model_name: str) -> str:
     """
     config = get_config()  # HACK
     if model_name == "whisper-1":
-        logger.info(f"{model_name} is not a valid model name. Using {config.whisper.model} instead.")
+        logger.info(
+            f"{model_name} is not a valid model name. Using {config.whisper.model} instead."
+        )
         return config.whisper.model
     return model_name
 
@@ -171,7 +193,9 @@ ModelName = Annotated[
 
 @router.post(
     "/v1/audio/translations",
-    response_model=str | CreateTranscriptionResponseJson | CreateTranscriptionResponseVerboseJson,
+    response_model=str
+    | CreateTranscriptionResponseJson
+    | CreateTranscriptionResponseVerboseJson,
 )
 def translate_file(
     config: ConfigDependency,
@@ -189,7 +213,11 @@ def translate_file(
     if response_format is None:
         response_format = config.default_response_format
     with model_manager.load_model(model) as whisper:
-        whisper_model = BatchedInferencePipeline(model=whisper) if config.whisper.use_batched_mode else whisper
+        whisper_model = (
+            BatchedInferencePipeline(model=whisper)
+            if config.whisper.use_batched_mode
+            else whisper
+        )
         segments, transcription_info = whisper_model.transcribe(
             audio,
             task=Task.TRANSLATE,
@@ -200,7 +228,9 @@ def translate_file(
         segments = TranscriptionSegment.from_faster_whisper_segments(segments)
 
         if stream:
-            return segments_to_streaming_response(segments, transcription_info, response_format)
+            return segments_to_streaming_response(
+                segments, transcription_info, response_format
+            )
         else:
             return segments_to_response(segments, transcription_info, response_format)
 
@@ -221,7 +251,9 @@ async def get_timestamp_granularities(request: Request) -> TimestampGranularitie
 # https://github.com/openai/openai-openapi/blob/master/openapi.yaml#L8915
 @router.post(
     "/v1/audio/transcriptions",
-    response_model=str | CreateTranscriptionResponseJson | CreateTranscriptionResponseVerboseJson,
+    response_model=str
+    | CreateTranscriptionResponseJson
+    | CreateTranscriptionResponseVerboseJson,
 )
 def transcribe_file(
     config: ConfigDependency,
@@ -242,6 +274,15 @@ def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
+    print(f"config: {config}")
+    print(f"request: {request}")
+    print(f"audio: {audio}")
+    print(f"model: {model}")
+    print(f"language: {language}")
+    print(f"response_format: {response_format}")
+    print(f"stream: {stream}")
+    print(f"hotwords: {hotwords}")
+    print(f"vad_filter: {vad_filter}")
     if model is None:
         model = config.whisper.model
     if language is None:
@@ -249,12 +290,19 @@ def transcribe_file(
     if response_format is None:
         response_format = config.default_response_format
     timestamp_granularities = asyncio.run(get_timestamp_granularities(request))
-    if timestamp_granularities != DEFAULT_TIMESTAMP_GRANULARITIES and response_format != ResponseFormat.VERBOSE_JSON:
+    if (
+        timestamp_granularities != DEFAULT_TIMESTAMP_GRANULARITIES
+        and response_format != ResponseFormat.VERBOSE_JSON
+    ):
         logger.warning(
             "It only makes sense to provide `timestamp_granularities[]` when `response_format` is set to `verbose_json`. See https://platform.openai.com/docs/api-reference/audio/createTranscription#audio-createtranscription-timestamp_granularities."  # noqa: E501
         )
     with model_manager.load_model(model) as whisper:
-        whisper_model = BatchedInferencePipeline(model=whisper) if config.whisper.use_batched_mode else whisper
+        whisper_model = (
+            BatchedInferencePipeline(model=whisper)
+            if config.whisper.use_batched_mode
+            else whisper
+        )
         segments, transcription_info = whisper_model.transcribe(
             audio,
             task=Task.TRANSCRIBE,
@@ -268,7 +316,9 @@ def transcribe_file(
         segments = TranscriptionSegment.from_faster_whisper_segments(segments)
 
         if stream:
-            return segments_to_streaming_response(segments, transcription_info, response_format)
+            return segments_to_streaming_response(
+                segments, transcription_info, response_format
+            )
         else:
             return segments_to_response(segments, transcription_info, response_format)
 
@@ -277,12 +327,16 @@ async def audio_receiver(ws: WebSocket, audio_stream: AudioStream) -> None:
     config = get_config()  # HACK
     try:
         while True:
-            bytes_ = await asyncio.wait_for(ws.receive_bytes(), timeout=config.max_no_data_seconds)
+            bytes_ = await asyncio.wait_for(
+                ws.receive_bytes(), timeout=config.max_no_data_seconds
+            )
             logger.debug(f"Received {len(bytes_)} bytes of audio data")
             audio_samples = audio_samples_from_file(BytesIO(bytes_))
             audio_stream.extend(audio_samples)
             if audio_stream.duration - config.inactivity_window_seconds >= 0:
-                audio = audio_stream.after(audio_stream.duration - config.inactivity_window_seconds)
+                audio = audio_stream.after(
+                    audio_stream.duration - config.inactivity_window_seconds
+                )
                 vad_opts = VadOptions(min_silence_duration_ms=500, speech_pad_ms=0)
                 # NOTE: This is a synchronous operation that runs every time new data is received.
                 # This shouldn't be an issue unless data is being received in tiny chunks or the user's machine is a potato.  # noqa: E501
@@ -298,7 +352,9 @@ async def audio_receiver(ws: WebSocket, audio_stream: AudioStream) -> None:
                 #     logger.info(f"Not enough speech in the last {config.inactivity_window_seconds} seconds.")
                 #     break
     except TimeoutError:
-        logger.info(f"No data received in {config.max_no_data_seconds} seconds. Closing the connection.")
+        logger.info(
+            f"No data received in {config.max_no_data_seconds} seconds. Closing the connection."
+        )
     except WebSocketDisconnect as e:
         logger.info(f"Client disconnected: {e}")
     audio_stream.close()
@@ -333,7 +389,9 @@ async def transcribe_stream(
         audio_stream = AudioStream()
         async with asyncio.TaskGroup() as tg:
             tg.create_task(audio_receiver(ws, audio_stream))
-            async for transcription in audio_transcriber(asr, audio_stream, min_duration=config.min_duration):
+            async for transcription in audio_transcriber(
+                asr, audio_stream, min_duration=config.min_duration
+            ):
                 logger.debug(f"Sending transcription: {transcription.text}")
                 if ws.client_state == WebSocketState.DISCONNECTED:
                     break
@@ -341,10 +399,16 @@ async def transcribe_stream(
                 if response_format == ResponseFormat.TEXT:
                     await ws.send_text(transcription.text)
                 elif response_format == ResponseFormat.JSON:
-                    await ws.send_json(CreateTranscriptionResponseJson.from_transcription(transcription).model_dump())
+                    await ws.send_json(
+                        CreateTranscriptionResponseJson.from_transcription(
+                            transcription
+                        ).model_dump()
+                    )
                 elif response_format == ResponseFormat.VERBOSE_JSON:
                     await ws.send_json(
-                        CreateTranscriptionResponseVerboseJson.from_transcription(transcription).model_dump()
+                        CreateTranscriptionResponseVerboseJson.from_transcription(
+                            transcription
+                        ).model_dump()
                     )
 
     if ws.client_state != WebSocketState.DISCONNECTED:
