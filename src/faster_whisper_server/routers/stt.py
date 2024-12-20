@@ -254,6 +254,38 @@ async def get_timestamp_granularities(request: Request) -> TimestampGranularitie
     return timestamp_granularities
 
 
+class WhisperWorker:
+    def __init__(self, model_size):
+        from faster_whisper import WhisperModel
+
+        self.model = WhisperModel(
+            model_size,
+            device="cuda",
+            compute_type="float16",
+            num_workers=1,
+        )
+
+    def transcribe(self, buffer):
+        ndarray = np.frombuffer(buffer, dtype=np.int16)
+        segments, info = self.model.transcribe(ndarray)
+        segments = list(segments)
+        return {
+            "text": " ".join([s.text.strip() for s in segments]),
+        }
+
+
+def init_worker(model_size):
+    # This will run once per worker process
+    global worker
+    worker = WhisperWorker(model_size)
+
+
+def transcribe_worker(buffer):
+    # Uses the global worker instance initialized in init_worker
+    global worker
+    return worker.transcribe(buffer)
+
+
 # https://platform.openai.com/docs/api-reference/audio/createTranscription
 # https://github.com/openai/openai-openapi/blob/master/openapi.yaml#L8915
 @router.post(
@@ -281,7 +313,7 @@ def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-    print(f"Audio shape {audio.shape}")
+    print(f"Config:")
     if model is None:
         model = config.whisper.model
     if language is None:
