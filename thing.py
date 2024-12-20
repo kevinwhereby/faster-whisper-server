@@ -34,7 +34,7 @@ def transcribe_file(
 # Example usage
 try:
     result = transcribe_file(
-        file_path="path/to/your/audio.wav",
+        file_path="./talking_about_a_hike.raw",
         model="whisper-1",
         response_format="json",
         temperature=0.0,
