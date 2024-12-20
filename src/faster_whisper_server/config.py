@@ -186,7 +186,7 @@ class Config(BaseSettings):
 
     api_key: str | None = None
     log_level: str = "debug"
-    host: str = Field(alias="UVICORN_HOST", default="127.0.0.1")
+    host: str = Field(alias="UVICORN_HOST", default="0.0.0.0")
     port: int = Field(alias="UVICORN_PORT", default=8080)
     allow_origins: list[str] | None = None
     """
