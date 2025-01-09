@@ -177,7 +177,7 @@ async def get_timestamp_granularities(request: Request) -> TimestampGranularitie
     return timestamp_granularities
 
 
-def transcribe_with_model(
+async def transcribe_with_model(
     model_manager,
     audio,
     model,
@@ -188,7 +188,7 @@ def transcribe_with_model(
     vad_filter,
     hotwords,
 ):
-    with model_manager.load_model(model) as whisper:
+    async with await model_manager.load_model(model) as whisper:
         whisper_model = (
             BatchedInferencePipeline(model=whisper)
             if config.whisper.use_batched_mode
@@ -204,7 +204,6 @@ def transcribe_with_model(
             vad_filter=vad_filter,
             hotwords=hotwords,
         )
-
         return segments, transcription_info
 
 
@@ -250,8 +249,7 @@ async def transcribe_file(
             "It only makes sense to provide `timestamp_granularities[]` when `response_format` is set to `verbose_json`. See https://platform.openai.com/docs/api-reference/audio/createTranscription#audio-createtranscription-timestamp_granularities."  # noqa: E501
         )
     start = time.perf_counter()
-    segments, transcription_info = await asyncio.to_thread(
-        transcribe_with_model,
+        segments, transcription_info = await transcribe_with_model(
         model_manager,
         audio,
         model,

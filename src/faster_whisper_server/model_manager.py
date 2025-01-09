@@ -105,6 +105,17 @@ class SelfDisposingModel[T]:
                 else:
                     logger.info(f"Model {self.model_id} is idle, not unloading")
 
+    async def __aenter__(self) -> T:
+        with self.rlock:
+            if self.model is None:
+                self._load()
+            self._increment_ref()
+            assert self.model is not None
+            return self.model
+
+    async def __aexit__(self, *_args) -> None:  # noqa: ANN002
+        self._decrement_ref()
+
     def __enter__(self) -> T:
         with self.rlock:
             if self.model is None:
