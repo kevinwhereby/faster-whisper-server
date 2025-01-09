@@ -5,6 +5,7 @@ import gc
 import logging
 import threading
 import time
+import asyncio
 from typing import TYPE_CHECKING
 
 from faster_whisper import WhisperModel
