@@ -109,7 +109,6 @@ AudioFileDependency = Annotated[NDArray[np.float32], Depends(audio_file_dependen
 def segments_to_response(
     segments: Iterable[TranscriptionSegment],
     transcription_info: TranscriptionInfo,
-    response_format: ResponseFormat,
 ) -> Response:
     with timing("Response preparation"):
         # Convert iterator to list more efficiently
