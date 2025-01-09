@@ -4,8 +4,3 @@ uv run uvicorn --factory faster_whisper_server.main:create_app \
     --host 0.0.0.0 \
     --port 8080 \
     --workers 2 \
-    --loop uvloop \
-    --http httptools \
-    --limit-concurrency 100 \
-    --backlog 2048 \
-    --timeout-keep-alive 5
