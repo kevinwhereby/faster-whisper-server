@@ -114,48 +114,21 @@ AudioFileDependency = Annotated[NDArray[np.float32], Depends(audio_file_dependen
 def segments_to_response(
     segments: Iterable[TranscriptionSegment],
     transcription_info: TranscriptionInfo,
-    response_format: ResponseFormat,
 ) -> Response:
     with timing("Response preparation"):
         segments_list = list(segments)  # Convert once if needed
 
     with timing("Response serialization"):
-        match response_format:
-            case ResponseFormat.TEXT:
-                content = segments_to_text(segments_list)
-                media_type = "text/plain"
-            case ResponseFormat.JSON:
-                # Use orjson for faster serialization
-                content = orjson.dumps(
-                    CreateTranscriptionResponseJson.from_segments(
-                        segments_list
-                    ).model_dump(exclude_none=True)
-                )
-                media_type = "application/json"
-            case ResponseFormat.VERBOSE_JSON:
-                import orjson
-
-                content = orjson.dumps(
-                    CreateTranscriptionResponseVerboseJson.from_segments(
-                        segments_list, transcription_info
-                    ).model_dump(exclude_none=True)
-                )
-                media_type = "application/json"
-            case ResponseFormat.VTT:
-                content = "".join(
-                    segments_to_vtt(segment, i)
-                    for i, segment in enumerate(segments_list)
-                )
-                media_type = "text/vtt"
-            case ResponseFormat.SRT:
-                content = "".join(
-                    segments_to_srt(segment, i)
-                    for i, segment in enumerate(segments_list)
-                )
-                media_type = "text/plain"
+        # Use orjson for faster serialization
+        content = orjson.dumps(
+            CreateTranscriptionResponseJson.from_segments(segments_list).model_dump(
+                exclude_none=True
+            )
+        )
+        media_type = "application/json"
 
     with timing("Response object creation"):
-        return Response(content=content, media_type=media_type)
+        return ORJSONResponse(content=content, media_type=media_type)
 
 
 def handle_default_openai_model(model_name: str) -> str:
@@ -263,6 +236,6 @@ async def transcribe_file(
         segments = TranscriptionSegment.from_faster_whisper_segments(segments)
 
     with timing("Response generation"):
-        response = segments_to_response(segments, transcription_info, response_format)
+        response = segments_to_response(segments, transcription_info)
 
     return response
