@@ -115,18 +115,12 @@ def segments_to_response(
         segments_list = [segment for segment in segments]
 
     with timing("Response serialization"):
-        match response_format:
-            case ResponseFormat.TEXT:
-                content = segments_to_text(segments_list)
-                media_type = "text/plain"
-            case ResponseFormat.JSON:
-                content = orjson.dumps(
-                    CreateTranscriptionResponseJson.from_segments(
-                        segments_list
-                    ).model_dump(exclude_none=True)
-                )
-                media_type = "application/json"
-            # ... rest of the cases
+        content = orjson.dumps(
+            CreateTranscriptionResponseJson.from_segments(segments_list).model_dump(
+                exclude_none=True
+            )
+        )
+        media_type = "application/json"
 
     return Response(content=content, media_type=media_type)
 
