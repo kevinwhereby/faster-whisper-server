@@ -348,7 +348,7 @@ def transcribe_file(
         segments = TranscriptionSegment.from_faster_whisper_segments(segments)
         end = time.perf_counter()
         logger.info(
-            f"Transcribed {audio} in {end - start:.2f} seconds. Prompt: {prompt}. Transcription: {transcription.text}."
+            f"Transcribed {audio} in {end - start:.2f} seconds. Prompt: {prompt}. Transcription info: {transcription_info}."
         )
 
         if stream:
