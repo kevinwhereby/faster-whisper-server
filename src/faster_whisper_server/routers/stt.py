@@ -249,7 +249,7 @@ async def transcribe_file(
             "It only makes sense to provide `timestamp_granularities[]` when `response_format` is set to `verbose_json`. See https://platform.openai.com/docs/api-reference/audio/createTranscription#audio-createtranscription-timestamp_granularities."  # noqa: E501
         )
     start = time.perf_counter()
-        segments, transcription_info = await transcribe_with_model(
+    segments, transcription_info = await transcribe_with_model(
         model_manager,
         audio,
         model,
