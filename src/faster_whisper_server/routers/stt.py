@@ -110,23 +110,24 @@ async def audio_file_dependency(
 AudioFileDependency = Annotated[NDArray[np.float32], Depends(audio_file_dependency)]
 
 
-def segments_to_response(
+async def segments_to_response(
     segments: Iterable[TranscriptionSegment],
     transcription_info: TranscriptionInfo,
 ) -> Response:
     with timing("Response preparation"):
-        segments_list = list(segments)  # Convert once if needed
+        # Move list conversion to a thread since it might be CPU-bound
+        segments_list = await asyncio.to_thread(list, segments)
 
     with timing("Response serialization"):
         # Use orjson for faster serialization
-        content = CreateTranscriptionResponseJson.from_segments(
-            segments_list
-        ).model_dump(exclude_none=True)
-
-        media_type = "application/json"
+        content = await asyncio.to_thread(
+            lambda: CreateTranscriptionResponseJson.from_segments(
+                segments_list
+            ).model_dump(exclude_none=True)
+        )
 
     with timing("Response object creation"):
-        return ORJSONResponse(content=content, media_type=media_type)
+        return ORJSONResponse(content=content)
 
 
 def handle_default_openai_model(model_name: str) -> str:
@@ -208,7 +209,7 @@ async def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-    with timing("Parameter setup"):
+   with timing("Parameter setup"):
         if model is None:
             model = config.whisper.model
         if language is None:
@@ -223,7 +224,6 @@ async def transcribe_file(
             model,
             language,
             prompt,
-            # timestamp_granularities,
             temperature,
             vad_filter,
             hotwords,
@@ -234,6 +234,6 @@ async def transcribe_file(
         segments = TranscriptionSegment.from_faster_whisper_segments(segments)
 
     with timing("Response generation"):
-        response = segments_to_response(segments, transcription_info)
+        response = await segments_to_response(segments, transcription_info)
 
     return response
