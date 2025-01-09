@@ -5,6 +5,7 @@ from io import BytesIO
 import logging
 import time
 import orjson
+from orjson import ORJSONREsponse
 from typing import TYPE_CHECKING, Annotated
 
 import av.error
