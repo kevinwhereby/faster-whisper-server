@@ -408,6 +408,7 @@ async def transcribe_stream(
     if response_format is None:
         response_format = config.default_response_format
     await ws.accept()
+    logger.info("VAD FILTER", vad_filter)
     transcribe_opts = {
         "language": language,
         "temperature": temperature,
