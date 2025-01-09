@@ -241,7 +241,7 @@ async def transcribe_file(
         language = config.default_language
     if response_format is None:
         response_format = config.default_response_format
-    timestamp_granularities = asyncio.run(get_timestamp_granularities(request))
+    timestamp_granularities = await get_timestamp_granularities(request)
     if (
         timestamp_granularities != DEFAULT_TIMESTAMP_GRANULARITIES
         and response_format != ResponseFormat.VERBOSE_JSON
