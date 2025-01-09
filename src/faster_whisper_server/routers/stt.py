@@ -209,7 +209,7 @@ async def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-   with timing("Parameter setup"):
+    with timing("Parameter setup"):
         if model is None:
             model = config.whisper.model
         if language is None:
