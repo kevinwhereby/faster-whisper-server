@@ -5,7 +5,7 @@ from io import BytesIO
 import logging
 import time
 import orjson
-from orjson import ORJSONResponse
+
 from typing import TYPE_CHECKING, Annotated
 
 import av.error
@@ -23,6 +23,7 @@ from fastapi import (
 from fastapi.exceptions import HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.websockets import WebSocketState
+from fastapi.responses import ORJSONResponse
 from faster_whisper.audio import decode_audio
 from faster_whisper.transcribe import BatchedInferencePipeline
 from faster_whisper.vad import VadOptions, get_speech_timestamps
