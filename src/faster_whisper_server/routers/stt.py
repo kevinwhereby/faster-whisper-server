@@ -259,7 +259,7 @@ async def transcribe_file(
         model,
         language,
         prompt,
-        timestamp_granularities,
+        # timestamp_granularities,
         temperature,
         vad_filter,
         hotwords,
