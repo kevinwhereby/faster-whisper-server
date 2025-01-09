@@ -70,11 +70,14 @@ def audio_file_dependency(
     file: Annotated[UploadFile, Form()],
 ) -> NDArray[np.float32]:
     try:
-        binary = file.file.read()
+        binary = await file.read()  # Use async read
         bytes = BytesIO(binary)
         bytes.seek(0)
-        audio = np.frombuffer(bytes.getbuffer(), dtype=np.int16)
-        audio = audio.astype(np.float32) / 32768.0
+        # Move the numpy operations to a thread since they're CPU-bound
+        audio = await asyncio.to_thread(
+            lambda: np.frombuffer(bytes.getbuffer(), dtype=np.int16).astype(np.float32)
+            / 32768.0
+        )
     except av.error.InvalidDataError as e:
         print(f"Error {e}, {file}")
         raise HTTPException(
@@ -183,7 +186,7 @@ async def transcribe_with_model(
     model,
     language,
     prompt,
-    timestamp_granularities,
+    # timestamp_granularities,
     temperature,
     vad_filter,
     hotwords,
@@ -200,7 +203,7 @@ async def transcribe_with_model(
             task=Task.TRANSCRIBE,
             language=language,
             initial_prompt=prompt,
-            word_timestamps="word" in timestamp_granularities,
+            # word_timestamps="word" in timestamp_granularities,
             temperature=temperature,
             vad_filter=vad_filter,
             hotwords=hotwords,
@@ -226,11 +229,11 @@ async def transcribe_file(
     prompt: Annotated[str | None, Form()] = None,
     response_format: Annotated[ResponseFormat | None, Form()] = None,
     temperature: Annotated[float, Form()] = 0.0,
-    timestamp_granularities: Annotated[
-        TimestampGranularities,
-        # WARN: `alias` doesn't actually work.
-        Form(alias="timestamp_granularities[]"),
-    ] = ["segment"],
+    # timestamp_granularities: Annotated[
+    #     TimestampGranularities,
+    #     # WARN: `alias` doesn't actually work.
+    #     Form(alias="timestamp_granularities[]"),
+    # ] = ["segment"],
     stream: Annotated[bool, Form()] = False,
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
@@ -241,14 +244,14 @@ async def transcribe_file(
         language = config.default_language
     if response_format is None:
         response_format = config.default_response_format
-    timestamp_granularities = await get_timestamp_granularities(request)
-    if (
-        timestamp_granularities != DEFAULT_TIMESTAMP_GRANULARITIES
-        and response_format != ResponseFormat.VERBOSE_JSON
-    ):
-        logger.warning(
-            "It only makes sense to provide `timestamp_granularities[]` when `response_format` is set to `verbose_json`. See https://platform.openai.com/docs/api-reference/audio/createTranscription#audio-createtranscription-timestamp_granularities."  # noqa: E501
-        )
+    # timestamp_granularities = await get_timestamp_granularities(request)
+    # if (
+    #     timestamp_granularities != DEFAULT_TIMESTAMP_GRANULARITIES
+    #     and response_format != ResponseFormat.VERBOSE_JSON
+    # ):
+    #     logger.warning(
+    #         "It only makes sense to provide `timestamp_granularities[]` when `response_format` is set to `verbose_json`. See https://platform.openai.com/docs/api-reference/audio/createTranscription#audio-createtranscription-timestamp_granularities."  # noqa: E501
+    #     )
     start = time.perf_counter()
     segments, transcription_info = await transcribe_with_model(
         model_manager,
