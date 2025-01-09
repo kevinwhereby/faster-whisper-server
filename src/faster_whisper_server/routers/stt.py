@@ -333,6 +333,7 @@ def transcribe_file(
             if config.whisper.use_batched_mode
             else whisper
         )
+        logger.info("VAD_FILTER", vad_filter)
         segments, transcription_info = whisper_model.transcribe(
             audio,
             task=Task.TRANSCRIBE,
