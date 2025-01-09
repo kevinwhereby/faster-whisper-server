@@ -106,22 +106,30 @@ async def audio_file_dependency(
 AudioFileDependency = Annotated[NDArray[np.float32], Depends(audio_file_dependency)]
 
 
-async def segments_to_response(
+def segments_to_response(
     segments: Iterable[TranscriptionSegment],
     transcription_info: TranscriptionInfo,
+    response_format: ResponseFormat,
 ) -> Response:
     with timing("Response preparation"):
-        # Move the blocking operation to a thread pool
-        segments_list = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: list(segments)
-        )
+        # Convert iterator to list more efficiently
+        segments_list = [segment for segment in segments]
 
-        # Create response data
-    data = CreateTranscriptionResponseJson.from_segments(segments_list).model_dump(
-        exclude_none=True
-    )
+    with timing("Response serialization"):
+        match response_format:
+            case ResponseFormat.TEXT:
+                content = segments_to_text(segments_list)
+                media_type = "text/plain"
+            case ResponseFormat.JSON:
+                content = orjson.dumps(
+                    CreateTranscriptionResponseJson.from_segments(
+                        segments_list
+                    ).model_dump(exclude_none=True)
+                )
+                media_type = "application/json"
+            # ... rest of the cases
 
-    return ORJSONResponse(content=data)
+    return Response(content=content, media_type=media_type)
 
 
 def handle_default_openai_model(model_name: str) -> str:

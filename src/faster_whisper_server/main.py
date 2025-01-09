@@ -70,8 +70,14 @@ def create_app() -> FastAPI:
     app.include_router(list_models_router)
     app.include_router(misc_router)
 
+    cpu_count = os.cpu_count() or 1
+    thread_pool = concurrent.futures.ThreadPoolExecutor(
+        max_workers=cpu_count * 2,  # 16 threads for 8 CPUs
+        thread_name_prefix="whisper_worker",
+    )
+
     loop = asyncio.get_event_loop()
-    loop.set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=16))
+    loop.set_default_executor(thread_pool)
 
     if config.allow_origins is not None:
         app.add_middleware(
