@@ -66,7 +66,7 @@ router = APIRouter()
 
 
 # TODO: test async vs sync performance
-def audio_file_dependency(
+async def audio_file_dependency(
     file: Annotated[UploadFile, Form()],
 ) -> NDArray[np.float32]:
     try:
