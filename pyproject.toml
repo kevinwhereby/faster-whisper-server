@@ -21,6 +21,7 @@ dependencies = [
     "piper>=0.14.3",
     "gradio>=5.0.2",
     "httpx-sse>=0.4.0",
+    "orjson>=3.10.7",
 ]
 
 [project.optional-dependencies]

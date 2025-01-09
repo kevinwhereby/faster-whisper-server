@@ -4,6 +4,7 @@ import asyncio
 from io import BytesIO
 import logging
 import time
+import orjson
 from typing import TYPE_CHECKING, Annotated
 
 import av.error
@@ -113,47 +114,46 @@ def segments_to_response(
     transcription_info: TranscriptionInfo,
     response_format: ResponseFormat,
 ) -> Response:
-    # Only convert to list once if needed
-    segments_list = None
+    with timing("Response preparation"):
+        segments_list = list(segments)  # Convert once if needed
 
-    match response_format:
-        case ResponseFormat.TEXT:
-            # Don't force list conversion for text format
-            return Response(segments_to_text(segments), media_type="text/plain")
-        case ResponseFormat.JSON:
-            if segments_list is None:
-                segments_list = list(segments)
-            # Use model_dump_json with exclude_none=True and exclude_defaults=True
-            return Response(
-                CreateTranscriptionResponseJson.from_segments(
-                    segments_list
-                ).model_dump_json(exclude_none=True, exclude_defaults=True),
-                media_type="application/json",
-            )
-        case ResponseFormat.VERBOSE_JSON:
-            if segments_list is None:
-                segments_list = list(segments)
-            return Response(
-                CreateTranscriptionResponseVerboseJson.from_segments(
-                    segments_list, transcription_info
-                ).model_dump_json(exclude_none=True, exclude_defaults=True),
-                media_type="application/json",
-            )
-        case ResponseFormat.VTT:
-            # Use generator expression instead of list comprehension
-            return Response(
-                "".join(
-                    segments_to_vtt(segment, i) for i, segment in enumerate(segments)
-                ),
-                media_type="text/vtt",
-            )
-        case ResponseFormat.SRT:
-            return Response(
-                "".join(
-                    segments_to_srt(segment, i) for i, segment in enumerate(segments)
-                ),
-                media_type="text/plain",
-            )
+    with timing("Response serialization"):
+        match response_format:
+            case ResponseFormat.TEXT:
+                content = segments_to_text(segments_list)
+                media_type = "text/plain"
+            case ResponseFormat.JSON:
+                # Use orjson for faster serialization
+                content = orjson.dumps(
+                    CreateTranscriptionResponseJson.from_segments(
+                        segments_list
+                    ).model_dump(exclude_none=True)
+                )
+                media_type = "application/json"
+            case ResponseFormat.VERBOSE_JSON:
+                import orjson
+
+                content = orjson.dumps(
+                    CreateTranscriptionResponseVerboseJson.from_segments(
+                        segments_list, transcription_info
+                    ).model_dump(exclude_none=True)
+                )
+                media_type = "application/json"
+            case ResponseFormat.VTT:
+                content = "".join(
+                    segments_to_vtt(segment, i)
+                    for i, segment in enumerate(segments_list)
+                )
+                media_type = "text/vtt"
+            case ResponseFormat.SRT:
+                content = "".join(
+                    segments_to_srt(segment, i)
+                    for i, segment in enumerate(segments_list)
+                )
+                media_type = "text/plain"
+
+    with timing("Response object creation"):
+        return Response(content=content, media_type=media_type)
 
 
 def handle_default_openai_model(model_name: str) -> str:
@@ -219,6 +219,7 @@ async def transcribe_with_model(
     response_model=str
     | CreateTranscriptionResponseJson
     | CreateTranscriptionResponseVerboseJson,
+    response_class=ORJSONResponse,  # Use ORJSONResponse for faster JSON serialization
 )
 async def transcribe_file(
     config: ConfigDependency,
