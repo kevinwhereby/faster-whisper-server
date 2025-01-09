@@ -113,25 +113,34 @@ def segments_to_response(
     transcription_info: TranscriptionInfo,
     response_format: ResponseFormat,
 ) -> Response:
-    segments = list(segments)
+    # Only convert to list once if needed
+    segments_list = None
+
     match response_format:
         case ResponseFormat.TEXT:
+            # Don't force list conversion for text format
             return Response(segments_to_text(segments), media_type="text/plain")
         case ResponseFormat.JSON:
+            if segments_list is None:
+                segments_list = list(segments)
+            # Use model_dump_json with exclude_none=True and exclude_defaults=True
             return Response(
                 CreateTranscriptionResponseJson.from_segments(
-                    segments
-                ).model_dump_json(),
+                    segments_list
+                ).model_dump_json(exclude_none=True, exclude_defaults=True),
                 media_type="application/json",
             )
         case ResponseFormat.VERBOSE_JSON:
+            if segments_list is None:
+                segments_list = list(segments)
             return Response(
                 CreateTranscriptionResponseVerboseJson.from_segments(
-                    segments, transcription_info
-                ).model_dump_json(),
+                    segments_list, transcription_info
+                ).model_dump_json(exclude_none=True, exclude_defaults=True),
                 media_type="application/json",
             )
         case ResponseFormat.VTT:
+            # Use generator expression instead of list comprehension
             return Response(
                 "".join(
                     segments_to_vtt(segment, i) for i, segment in enumerate(segments)
