@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from io import BytesIO
 import logging
+import time
 from typing import TYPE_CHECKING, Annotated
 
 import av.error
@@ -333,7 +334,7 @@ def transcribe_file(
             if config.whisper.use_batched_mode
             else whisper
         )
-        logger.info(f"VAD_FILTER {vad_filter}")
+        start = time.perf_counter()
         segments, transcription_info = whisper_model.transcribe(
             audio,
             task=Task.TRANSCRIBE,
@@ -345,6 +346,10 @@ def transcribe_file(
             hotwords=hotwords,
         )
         segments = TranscriptionSegment.from_faster_whisper_segments(segments)
+        end = time.perf_counter()
+        logger.info(
+            f"Transcribed {audio} in {end - start:.2f} seconds. Prompt: {prompt}. Transcription: {transcription.text}."
+        )
 
         if stream:
             return segments_to_streaming_response(
