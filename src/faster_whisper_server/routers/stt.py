@@ -115,19 +115,19 @@ async def segments_to_response(
     transcription_info: TranscriptionInfo,
 ) -> Response:
     with timing("Response preparation"):
-        # Move list conversion to a thread since it might be CPU-bound
-        segments_list = await asyncio.to_thread(list, segments)
+        # Move the blocking operation to a thread pool
+        segments_list = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: list(segments)
+        )
 
     with timing("Response serialization"):
-        # Use orjson for faster serialization
-        content = await asyncio.to_thread(
-            lambda: CreateTranscriptionResponseJson.from_segments(
-                segments_list
-            ).model_dump(exclude_none=True)
+        # Create response data
+        data = CreateTranscriptionResponseJson.from_segments(segments_list).model_dump(
+            exclude_none=True
         )
 
     with timing("Response object creation"):
-        return ORJSONResponse(content=content)
+        return ORJSONResponse(content=data)
 
 
 def handle_default_openai_model(model_name: str) -> str:

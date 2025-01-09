@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import logging
 import time
 import platform
+import concurrent.futures
 from typing import TYPE_CHECKING
 
 from fastapi import (
@@ -67,6 +68,9 @@ def create_app() -> FastAPI:
     app.include_router(stt_router)
     app.include_router(list_models_router)
     app.include_router(misc_router)
+
+    loop = asyncio.get_event_loop()
+    loop.set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=16))
 
     if config.allow_origins is not None:
         app.add_middleware(
