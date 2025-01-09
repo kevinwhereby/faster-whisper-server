@@ -187,6 +187,7 @@ async def transcribe_with_model(
     temperature,
     vad_filter,
     hotwords,
+    config,
 ):
     async with await model_manager.load_model(model) as whisper:
         whisper_model = (
@@ -259,6 +260,7 @@ async def transcribe_file(
         temperature,
         vad_filter,
         hotwords,
+        config,
     )
     segments = TranscriptionSegment.from_faster_whisper_segments(segments)
     end = time.perf_counter()
