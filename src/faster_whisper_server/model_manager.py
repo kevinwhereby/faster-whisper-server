@@ -161,21 +161,19 @@ class WhisperModelManager:
             self.loaded_models[model_name].unload()
 
     async def load_model(self, model_name: str) -> SelfDisposingModel[WhisperModel]:
-        with timing("Model lock acquisition"):
-            async with self._manager_lock:
-                if model_name not in self._model_locks:
-                    self._model_locks[model_name] = asyncio.Lock()
+        async with self._manager_lock:
+            if model_name not in self._model_locks:
+                self._model_locks[model_name] = asyncio.Lock()
 
         model_lock = self._model_locks[model_name]
         async with model_lock:
-            with timing("Model loading"):
-                if model_name in self.loaded_models:
-                    return self.loaded_models[model_name]
-
-                self.loaded_models[model_name] = SelfDisposingModel[WhisperModel](
-                    model_name,
-                    load_fn=lambda: self._load_fn(model_name),
-                    ttl=self.whisper_config.ttl,
-                    unload_fn=self._handle_model_unload,
-                )
+            if model_name in self.loaded_models:
                 return self.loaded_models[model_name]
+
+            self.loaded_models[model_name] = SelfDisposingModel[WhisperModel](
+                model_name,
+                load_fn=lambda: self._load_fn(model_name),
+                ttl=self.whisper_config.ttl,
+                unload_fn=self._handle_model_unload,
+            )
+            return self.loaded_models[model_name]

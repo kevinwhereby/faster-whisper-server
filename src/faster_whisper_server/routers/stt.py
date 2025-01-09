@@ -74,18 +74,14 @@ async def audio_file_dependency(
     file: Annotated[UploadFile, Form()],
 ) -> NDArray[np.float32]:
     try:
-        with timing("File read"):
-            binary = await file.read()
-            bytes = BytesIO(binary)
-            bytes.seek(0)
+        binary = await file.read()
+        bytes = BytesIO(binary)
+        bytes.seek(0)
 
-        with timing("Audio processing"):
-            audio = await asyncio.to_thread(
-                lambda: np.frombuffer(bytes.getbuffer(), dtype=np.int16).astype(
-                    np.float32
-                )
-                / 32768.0
-            )
+        audio = await asyncio.to_thread(
+            lambda: np.frombuffer(bytes.getbuffer(), dtype=np.int16).astype(np.float32)
+            / 32768.0
+        )
     except av.error.InvalidDataError as e:
         print(f"Error {e}, {file}")
         raise HTTPException(
@@ -120,14 +116,12 @@ async def segments_to_response(
             None, lambda: list(segments)
         )
 
-    with timing("Response serialization"):
         # Create response data
-        data = CreateTranscriptionResponseJson.from_segments(segments_list).model_dump(
-            exclude_none=True
-        )
+    data = CreateTranscriptionResponseJson.from_segments(segments_list).model_dump(
+        exclude_none=True
+    )
 
-    with timing("Response object creation"):
-        return ORJSONResponse(content=data)
+    return ORJSONResponse(content=data)
 
 
 def handle_default_openai_model(model_name: str) -> str:
@@ -209,13 +203,12 @@ async def transcribe_file(
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-    with timing("Parameter setup"):
-        if model is None:
-            model = config.whisper.model
-        if language is None:
-            language = config.default_language
-        if response_format is None:
-            response_format = config.default_response_format
+    if model is None:
+        model = config.whisper.model
+    if language is None:
+        language = config.default_language
+    if response_format is None:
+        response_format = config.default_response_format
 
     with timing("Model loading and transcription"):
         segments, transcription_info = await transcribe_with_model(
@@ -230,10 +223,8 @@ async def transcribe_file(
             config,
         )
 
-    with timing("Segment conversion"):
-        segments = TranscriptionSegment.from_faster_whisper_segments(segments)
+    segments = TranscriptionSegment.from_faster_whisper_segments(segments)
 
-    with timing("Response generation"):
-        response = await segments_to_response(segments, transcription_info)
+    response = await segments_to_response(segments, transcription_info)
 
     return response

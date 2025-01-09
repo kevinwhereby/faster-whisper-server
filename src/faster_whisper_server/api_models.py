@@ -118,17 +118,15 @@ class CreateTranscriptionResponseJson(BaseModel):
 
     @classmethod
     def from_segments(cls, segments: Iterable[TranscriptionSegment]) -> Self:
-        with timing("CreateTranscriptionResponseJson"):
-            result = cls(text=segments_to_text(segments))
-            return result
+        result = cls(text=segments_to_text(segments))
+        return result
 
     @classmethod
     def from_transcription(
         cls, transcription: Transcription
     ) -> CreateTranscriptionResponseJson:
-        with timing("CreateTranscriptionResponseJson"):
-            result = cls(text=transcription.text)
-            return result
+        result = cls(text=transcription.text)
+        return result
 
 
 # https://platform.openai.com/docs/api-reference/audio/verbose-json-object
