@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
         dependencies.append(verify_api_key)
 
     app = FastAPI(lifespan=lifespan, dependencies=dependencies)
+    app.state.max_workers = os.cpu_count() * 2  # Match worker count to CPUs
 
     @app.middleware("http")
     async def add_process_time_header(request: Request, call_next):
