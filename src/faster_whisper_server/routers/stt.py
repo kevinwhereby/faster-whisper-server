@@ -226,6 +226,6 @@ async def transcribe_file(
 
     segments = TranscriptionSegment.from_faster_whisper_segments(segments)
 
-    response = await segments_to_response(segments, transcription_info)
+    response = segments_to_response(segments, transcription_info)
 
     return response
