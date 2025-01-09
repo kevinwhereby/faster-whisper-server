@@ -9,7 +9,7 @@ from openai.resources.audio import AsyncSpeech, AsyncTranscriptions
 from openai.resources.chat.completions import AsyncCompletions
 
 from faster_whisper_server.config import Config
-from faster_whisper_server.model_manager import PiperModelManager, WhisperModelManager
+from faster_whisper_server.model_manager import WhisperModelManager
 
 
 @lru_cache
@@ -27,17 +27,6 @@ def get_model_manager() -> WhisperModelManager:
 
 
 ModelManagerDependency = Annotated[WhisperModelManager, Depends(get_model_manager)]
-
-
-@lru_cache
-def get_piper_model_manager() -> PiperModelManager:
-    config = get_config()  # HACK
-    return PiperModelManager(config.whisper.ttl)  # HACK
-
-
-PiperModelManagerDependency = Annotated[
-    PiperModelManager, Depends(get_piper_model_manager)
-]
 
 
 security = HTTPBearer()
