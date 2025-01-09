@@ -10,7 +10,11 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 
-from faster_whisper_server.dependencies import get_config, get_model_manager, verify_api_key
+from faster_whisper_server.dependencies import (
+    get_config,
+    get_model_manager,
+    verify_api_key,
+)
 from faster_whisper_server.logger import setup_logger
 from faster_whisper_server.routers.list_models import (
     router as list_models_router,
@@ -30,14 +34,6 @@ def create_app() -> FastAPI:
     setup_logger()
 
     logger = logging.getLogger(__name__)
-
-    if platform.machine() == "x86_64":
-        from faster_whisper_server.routers.speech import (
-            router as speech_router,
-        )
-    else:
-        logger.warning("`/v1/audio/speech` is only supported on x86_64 machines")
-        speech_router = None
 
     config = get_config()  # HACK
     logger.debug(f"Config: {config}")
@@ -59,8 +55,6 @@ def create_app() -> FastAPI:
     app.include_router(stt_router)
     app.include_router(list_models_router)
     app.include_router(misc_router)
-    if speech_router is not None:
-        app.include_router(speech_router)
 
     if config.allow_origins is not None:
         app.add_middleware(
