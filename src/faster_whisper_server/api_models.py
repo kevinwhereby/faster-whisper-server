@@ -10,6 +10,8 @@ from faster_whisper_server.text_utils import (
     segments_to_text,
 )
 
+from faster_whisper_server.timing import timing
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -68,6 +70,11 @@ class TranscriptionSegment(BaseModel):
     compression_ratio: float
     no_speech_prob: float
     words: list[TranscriptionWord] | None
+    model_config = ConfigDict(
+        frozen=True,  # Make immutable
+        validate_assignment=False,  # Skip validation for better performance
+        extra="ignore",  # Ignore extra fields
+    )
 
     @classmethod
     def from_faster_whisper_segments(
@@ -106,7 +113,7 @@ class TranscriptionSegment(BaseModel):
 
 
 class CreateTranscriptionResponseJson(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, validate_assignment=False, extra="ignore")
     text: str
 
     @classmethod
@@ -117,7 +124,9 @@ class CreateTranscriptionResponseJson(BaseModel):
     def from_transcription(
         cls, transcription: Transcription
     ) -> CreateTranscriptionResponseJson:
-        return cls(text=transcription.text)
+        with timing("CreateTranscriptionResponseJson"):
+            result = cls(text=transcription.text)
+            return result
 
 
 # https://platform.openai.com/docs/api-reference/audio/verbose-json-object
