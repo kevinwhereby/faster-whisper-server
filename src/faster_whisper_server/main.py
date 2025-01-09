@@ -5,6 +5,7 @@ import logging
 import time
 import platform
 import concurrent.futures
+import asyncio
 from typing import TYPE_CHECKING
 
 from fastapi import (
