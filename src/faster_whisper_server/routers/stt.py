@@ -208,18 +208,6 @@ async def transcribe_with_model(
         return segments, transcription_info
 
 
-@router.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    logger.info(
-        "Time took to process the request and return response is {} sec".format(
-            time.time() - start_time
-        )
-    )
-    return response
-
-
 # https://platform.openai.com/docs/api-reference/audio/createTranscription
 # https://github.com/openai/openai-openapi/blob/master/openapi.yaml#L8915
 @router.post(

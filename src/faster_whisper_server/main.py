@@ -52,6 +52,17 @@ def create_app() -> FastAPI:
 
     app = FastAPI(lifespan=lifespan, dependencies=dependencies)
 
+    @app.middleware("http")
+    async def add_process_time_header(request: Request, call_next):
+        start_time = time.time()
+        response = await call_next(request)
+        logger.info(
+            "Time took to process the request and return response is {} sec".format(
+                time.time() - start_time
+            )
+        )
+        return response
+
     app.include_router(stt_router)
     app.include_router(list_models_router)
     app.include_router(misc_router)
