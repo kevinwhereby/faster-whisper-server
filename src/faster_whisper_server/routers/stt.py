@@ -26,7 +26,6 @@ from fastapi.websockets import WebSocketState
 from fastapi.responses import ORJSONResponse
 from faster_whisper.audio import decode_audio
 from faster_whisper.transcribe import BatchedInferencePipeline
-from faster_whisper.vad import VadOptions, get_speech_timestamps
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import AfterValidator, Field
@@ -120,11 +119,10 @@ def segments_to_response(
 
     with timing("Response serialization"):
         # Use orjson for faster serialization
-        content = orjson.dumps(
-            CreateTranscriptionResponseJson.from_segments(segments_list).model_dump(
-                exclude_none=True
-            )
-        )
+        content = CreateTranscriptionResponseJson.from_segments(
+            segments_list
+        ).model_dump(exclude_none=True)
+
         media_type = "application/json"
 
     with timing("Response object creation"):
