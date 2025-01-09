@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from faster_whisper import WhisperModel
 
 from faster_whisper_server.hf_utils import get_piper_voice_model_file
+from faster_whisper_server.timing import timing
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -160,20 +161,21 @@ class WhisperModelManager:
             self.loaded_models[model_name].unload()
 
     async def load_model(self, model_name: str) -> SelfDisposingModel[WhisperModel]:
-        # Only lock the model locks dict when needed
-        async with self._manager_lock:
-            if model_name not in self._model_locks:
-                self._model_locks[model_name] = asyncio.Lock()
+        with timing("Model lock acquisition"):
+            async with self._manager_lock:
+                if model_name not in self._model_locks:
+                    self._model_locks[model_name] = asyncio.Lock()
 
         model_lock = self._model_locks[model_name]
         async with model_lock:
-            if model_name in self.loaded_models:
-                return self.loaded_models[model_name]
+            with timing("Model loading"):
+                if model_name in self.loaded_models:
+                    return self.loaded_models[model_name]
 
-            self.loaded_models[model_name] = SelfDisposingModel[WhisperModel](
-                model_name,
-                load_fn=lambda: self._load_fn(model_name),
-                ttl=self.whisper_config.ttl,
-                unload_fn=self._handle_model_unload,
-            )
-            return self.loaded_models[model_name]
+                self.loaded_models[model_name] = SelfDisposingModel[WhisperModel](
+                    model_name,
+                    load_fn=lambda: self._load_fn(model_name),
+                    ttl=self.whisper_config.ttl,
+                    unload_fn=self._handle_model_unload,
+                )
+                return self.loaded_models[model_name]

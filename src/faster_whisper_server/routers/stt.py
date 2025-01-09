@@ -24,9 +24,11 @@ from fastapi.websockets import WebSocketState
 from faster_whisper.audio import decode_audio
 from faster_whisper.transcribe import BatchedInferencePipeline
 from faster_whisper.vad import VadOptions, get_speech_timestamps
+import numpy as np
 from numpy.typing import NDArray
 from pydantic import AfterValidator, Field
-import numpy as np
+
+from faster_whisper_server.timing import timing
 
 from faster_whisper_server.api_models import (
     DEFAULT_TIMESTAMP_GRANULARITIES,
@@ -70,14 +72,18 @@ async def audio_file_dependency(
     file: Annotated[UploadFile, Form()],
 ) -> NDArray[np.float32]:
     try:
-        binary = await file.read()  # Use async read
-        bytes = BytesIO(binary)
-        bytes.seek(0)
-        # Move the numpy operations to a thread since they're CPU-bound
-        audio = await asyncio.to_thread(
-            lambda: np.frombuffer(bytes.getbuffer(), dtype=np.int16).astype(np.float32)
-            / 32768.0
-        )
+        with timing("File read"):
+            binary = await file.read()
+            bytes = BytesIO(binary)
+            bytes.seek(0)
+
+        with timing("Audio processing"):
+            audio = await asyncio.to_thread(
+                lambda: np.frombuffer(bytes.getbuffer(), dtype=np.int16).astype(
+                    np.float32
+                )
+                / 32768.0
+            )
     except av.error.InvalidDataError as e:
         print(f"Error {e}, {file}")
         raise HTTPException(
@@ -168,25 +174,12 @@ ModelName = Annotated[
 ]
 
 
-# HACK: Since Form() doesn't support `alias`, we need to use a workaround.
-async def get_timestamp_granularities(request: Request) -> TimestampGranularities:
-    form = await request.form()
-    if form.get("timestamp_granularities[]") is None:
-        return DEFAULT_TIMESTAMP_GRANULARITIES
-    timestamp_granularities = form.getlist("timestamp_granularities[]")
-    assert (
-        timestamp_granularities in TIMESTAMP_GRANULARITIES_COMBINATIONS
-    ), f"{timestamp_granularities} is not a valid value for `timestamp_granularities[]`."
-    return timestamp_granularities
-
-
 async def transcribe_with_model(
     model_manager,
     audio,
     model,
     language,
     prompt,
-    # timestamp_granularities,
     temperature,
     vad_filter,
     hotwords,
@@ -203,7 +196,6 @@ async def transcribe_with_model(
             task=Task.TRANSCRIBE,
             language=language,
             initial_prompt=prompt,
-            # word_timestamps="word" in timestamp_granularities,
             temperature=temperature,
             vad_filter=vad_filter,
             hotwords=hotwords,
@@ -229,44 +221,36 @@ async def transcribe_file(
     prompt: Annotated[str | None, Form()] = None,
     response_format: Annotated[ResponseFormat | None, Form()] = None,
     temperature: Annotated[float, Form()] = 0.0,
-    # timestamp_granularities: Annotated[
-    #     TimestampGranularities,
-    #     # WARN: `alias` doesn't actually work.
-    #     Form(alias="timestamp_granularities[]"),
-    # ] = ["segment"],
     stream: Annotated[bool, Form()] = False,
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
-    if model is None:
-        model = config.whisper.model
-    if language is None:
-        language = config.default_language
-    if response_format is None:
-        response_format = config.default_response_format
-    # timestamp_granularities = await get_timestamp_granularities(request)
-    # if (
-    #     timestamp_granularities != DEFAULT_TIMESTAMP_GRANULARITIES
-    #     and response_format != ResponseFormat.VERBOSE_JSON
-    # ):
-    #     logger.warning(
-    #         "It only makes sense to provide `timestamp_granularities[]` when `response_format` is set to `verbose_json`. See https://platform.openai.com/docs/api-reference/audio/createTranscription#audio-createtranscription-timestamp_granularities."  # noqa: E501
-    #     )
-    start = time.perf_counter()
-    segments, transcription_info = await transcribe_with_model(
-        model_manager,
-        audio,
-        model,
-        language,
-        prompt,
-        # timestamp_granularities,
-        temperature,
-        vad_filter,
-        hotwords,
-        config,
-    )
-    segments = TranscriptionSegment.from_faster_whisper_segments(segments)
-    end = time.perf_counter()
-    logger.info(f"Transcribed in {end - start:.2f} seconds.")
+    with timing("Parameter setup"):
+        if model is None:
+            model = config.whisper.model
+        if language is None:
+            language = config.default_language
+        if response_format is None:
+            response_format = config.default_response_format
 
-    return segments_to_response(segments, transcription_info, response_format)
+    with timing("Model loading and transcription"):
+        segments, transcription_info = await transcribe_with_model(
+            model_manager,
+            audio,
+            model,
+            language,
+            prompt,
+            # timestamp_granularities,
+            temperature,
+            vad_filter,
+            hotwords,
+            config,
+        )
+
+    with timing("Segment conversion"):
+        segments = TranscriptionSegment.from_faster_whisper_segments(segments)
+
+    with timing("Response generation"):
+        response = segments_to_response(segments, transcription_info, response_format)
+
+    return response
