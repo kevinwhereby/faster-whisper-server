@@ -118,7 +118,9 @@ class CreateTranscriptionResponseJson(BaseModel):
 
     @classmethod
     def from_segments(cls, segments: Iterable[TranscriptionSegment]) -> Self:
-        return cls(text=segments_to_text(segments))
+        with timing("CreateTranscriptionResponseJson"):
+            result = cls(text=segments_to_text(segments))
+            return result
 
     @classmethod
     def from_transcription(
