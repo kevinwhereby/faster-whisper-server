@@ -149,7 +149,7 @@ class Task(enum.StrEnum):
 class WhisperConfig(BaseModel):
     """See https://github.com/SYSTRAN/faster-whisper/blob/master/faster_whisper/transcribe.py#L599."""
 
-    model: str = Field(default="Systran/faster-whisper-small")
+    model: str = Field(default="Systran/faster-whisper-large-v3")
     """
     Default Huggingface model to use for transcription. Note, the model must support being ran using CTranslate2.
     This model will be used if no model is specified in the request.
@@ -161,14 +161,14 @@ class WhisperConfig(BaseModel):
     device_index: int | list[int] = 0
     compute_type: Quantization = Field(default=Quantization.DEFAULT)
     cpu_threads: int = 0
-    num_workers: int = 1
+    num_workers: int = 2
     ttl: int = Field(default=300, ge=-1)
     """
     Time in seconds until the model is unloaded if it is not being used.
     -1: Never unload the model.
     0: Unload the model immediately after usage.
     """
-    use_batched_mode: bool = False
+    use_batched_mode: bool = True
     """
     Whether to use batch mode(introduced in 1.1.0 `faster-whisper` release) for inference. This will likely become the default in the future and the configuration option will be removed.
     """  # noqa: E501
@@ -196,12 +196,12 @@ class Config(BaseSettings):
         `export ALLOW_ORIGINS='["*"]'`
     """
 
-    enable_ui: bool = True
+    enable_ui: bool = False
     """
     Whether to enable the Gradio UI. You may want to disable this if you want to minimize the dependencies.
     """
 
-    default_language: Language | None = None
+    default_language: Language | None = "en"
     """
     Default language to use for transcription. If not set, the language will be detected automatically.
     It is recommended to set this as it will improve the performance.

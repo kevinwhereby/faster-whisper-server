@@ -372,16 +372,21 @@ async def audio_receiver(ws: WebSocket, audio_stream: AudioStream) -> None:
                 # NOTE: This is a synchronous operation that runs every time new data is received.
                 # This shouldn't be an issue unless data is being received in tiny chunks or the user's machine is a potato.  # noqa: E501
                 timestamps = get_speech_timestamps(audio.data, vad_opts)
-                # if len(timestamps) == 0:
-                #     logger.info(f"No speech detected in the last {config.inactivity_window_seconds} seconds.")
-                #     break
-                # elif (
-                #     # last speech end time
-                #     config.inactivity_window_seconds - timestamps[-1]["end"] / SAMPLES_PER_SECOND
-                #     >= config.max_inactivity_seconds
-                # ):
-                #     logger.info(f"Not enough speech in the last {config.inactivity_window_seconds} seconds.")
-                #     break
+                if len(timestamps) == 0:
+                    logger.info(
+                        f"No speech detected in the last {config.inactivity_window_seconds} seconds."
+                    )
+                    break
+                elif (
+                    # last speech end time
+                    config.inactivity_window_seconds
+                    - timestamps[-1]["end"] / SAMPLES_PER_SECOND
+                    >= config.max_inactivity_seconds
+                ):
+                    logger.info(
+                        f"Not enough speech in the last {config.inactivity_window_seconds} seconds."
+                    )
+                    break
     except TimeoutError:
         logger.info(
             f"No data received in {config.max_no_data_seconds} seconds. Closing the connection."
