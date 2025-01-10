@@ -36,7 +36,7 @@ class Quantization(enum.StrEnum):
     BFLOAT16 = "bfloat16"
     FLOAT32 = "float32"
     DEFAULT = "default"
-    AUTIO = "auto"
+    AUTO = "auto"
 
 
 class Language(enum.StrEnum):
