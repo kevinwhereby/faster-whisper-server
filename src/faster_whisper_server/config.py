@@ -36,6 +36,7 @@ class Quantization(enum.StrEnum):
     BFLOAT16 = "bfloat16"
     FLOAT32 = "float32"
     DEFAULT = "default"
+    AUTIO = "auto"
 
 
 class Language(enum.StrEnum):
@@ -159,9 +160,9 @@ class WhisperConfig(BaseModel):
     """
     inference_device: Device = Field(default=Device.AUTO)
     device_index: int | list[int] = 0
-    compute_type: Quantization = Field(default=Quantization.DEFAULT)
+    compute_type: Quantization = Field(default=Quantization.AUTO)
     cpu_threads: int = 0
-    num_workers: int = 2
+    num_workers: int = 1
     ttl: int = Field(default=300, ge=-1)
     """
     Time in seconds until the model is unloaded if it is not being used.

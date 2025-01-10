@@ -72,7 +72,7 @@ def create_app() -> FastAPI:
     app.include_router(misc_router)
 
     thread_pool = concurrent.futures.ThreadPoolExecutor(
-        max_workers=4,  # 16 threads for 8 CPUs
+        max_workers=8,  # 16 threads for 8 CPUs
         thread_name_prefix="whisper_worker",
     )
 

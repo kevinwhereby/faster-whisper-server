@@ -163,6 +163,7 @@ async def transcribe_with_model(
     hotwords,
     config,
 ):
+    logger.info(f"Batched? {config.whisper.use_batched_mode}")
     async with await model_manager.load_model(model) as whisper:
         whisper_model = (
             BatchedInferencePipeline(model=whisper)
