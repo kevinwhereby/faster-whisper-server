@@ -196,19 +196,19 @@ async def transcribe_with_model(
     response_class=ORJSONResponse,  # Use ORJSONResponse for faster JSON serialization
 )
 async def transcribe_file(
-    audio: AudioFileDependency,
-    batch_size: Annotated[bool, Form()] = 16,
     config: ConfigDependency,
-    hotwords: Annotated[str | None, Form()] = None,
-    language: Annotated[Language | None, Form()] = None,
-    model: Annotated[ModelName | None, Form()] = None,
     model_manager: ModelManagerDependency,
-    prompt: Annotated[str | None, Form()] = None,
     request: Request,
+    audio: AudioFileDependency,
+    model: Annotated[ModelName | None, Form()] = None,
+    language: Annotated[Language | None, Form()] = None,
+    prompt: Annotated[str | None, Form()] = None,
     response_format: Annotated[ResponseFormat | None, Form()] = None,
-    stream: Annotated[bool, Form()] = False,
     temperature: Annotated[float, Form()] = 0.0,
+    stream: Annotated[bool, Form()] = False,
+    hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
+    batch_size: Annotated[bool, Form()] = 16,
 ) -> Response | StreamingResponse:
     if model is None:
         model = config.whisper.model
