@@ -153,16 +153,16 @@ ModelName = Annotated[
 
 
 async def transcribe_with_model(
-    audio,
-    batch_size,
-    config,
-    hotwords,
-    language,
-    model,
     model_manager,
+    audio,
+    model,
+    language,
     prompt,
     temperature,
     vad_filter,
+    hotwords,
+    config,
+    batch_size,
 ):
     logger.info(f"Batched? {config.whisper.use_batched_mode}")
     async with await model_manager.load_model(model) as whisper:
@@ -175,13 +175,13 @@ async def transcribe_with_model(
         )
         segments, transcription_info = whisper_model.transcribe(
             audio,
-            batch_size=batch_size,
-            hotwords=hotwords,
-            initial_prompt=prompt,
-            language=language,
             task=Task.TRANSCRIBE,
+            language=language,
+            initial_prompt=prompt,
             temperature=temperature,
             vad_filter=vad_filter,
+            hotwords=hotwords,
+            batch_size=batch_size,
         )
         return segments, transcription_info
 
@@ -208,7 +208,6 @@ async def transcribe_file(
     stream: Annotated[bool, Form()] = False,
     hotwords: Annotated[str | None, Form()] = None,
     vad_filter: Annotated[bool, Form()] = False,
-    batch_size: Annotated[bool, Form()] = 16,
 ) -> Response | StreamingResponse:
     if model is None:
         model = config.whisper.model
@@ -219,16 +218,16 @@ async def transcribe_file(
 
     with timing("Model loading and transcription"):
         segments, transcription_info = await transcribe_with_model(
-            audio,
-            batch_size,
-            config,
-            hotwords,
-            language,
-            model,
             model_manager,
+            audio,
+            model,
+            language,
             prompt,
             temperature,
             vad_filter,
+            hotwords,
+            config,
+            16,
         )
 
     logger.info(f"Segments: {segments}")
