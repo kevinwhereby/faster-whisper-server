@@ -150,7 +150,8 @@ class Task(enum.StrEnum):
 class WhisperConfig(BaseModel):
     """See https://github.com/SYSTRAN/faster-whisper/blob/master/faster_whisper/transcribe.py#L599."""
 
-    model: str = Field(default="Systran/faster-whisper-large-v3")
+    # model: str = Field(default="Systran/faster-whisper-large-v3")
+    model: str = Field(default="deepdml/faster-whisper-large-v3-turbo-ct2")
     """
     Default Huggingface model to use for transcription. Note, the model must support being ran using CTranslate2.
     This model will be used if no model is specified in the request.
@@ -158,9 +159,9 @@ class WhisperConfig(BaseModel):
     Models created by authors of `faster-whisper` can be found at https://huggingface.co/Systran
     You can find other supported models at https://huggingface.co/models?p=2&sort=trending&search=ctranslate2 and https://huggingface.co/models?sort=trending&search=ct2
     """
-    inference_device: Device = Field(default=Device.AUTO)
+    inference_device: Device = Field(default=Device.CUDA)
     device_index: int | list[int] = 0
-    compute_type: Quantization = Field(default=Quantization.AUTO)
+    compute_type: Quantization = Field(default=Quantization.FLOAT16)
     cpu_threads: int = 0
     num_workers: int = 1
     ttl: int = Field(default=300, ge=-1)
