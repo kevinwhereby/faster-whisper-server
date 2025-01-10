@@ -152,9 +152,10 @@ class WhisperConfig(BaseModel):
 
     # model: str = Field(default="Systran/faster-whisper-large-v3")
     # model: str = Field(default="deepdml/faster-whisper-large-v3-turbo-ct2")
-    # model: str = Field(default="Systran/faster-distil-whisper-large-v2")
+    # model: str = Field(default="Systran/faster-distil-whisper-large-v2") ~ 0.2
     # model: str = Field(default="Systran/faster-whisper-medium")
-    model: str = Field(default="Systran/faster-distil-whisper-medium.en")
+    # model: str = Field(default="Systran/faster-distil-whisper-medium.en") ~0.15
+    model: str = Field(default="Systran/faster-whisper-tiny")
     """
     Default Huggingface model to use for transcription. Note, the model must support being ran using CTranslate2.
     This model will be used if no model is specified in the request.
