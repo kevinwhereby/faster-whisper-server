@@ -161,6 +161,7 @@ class WhisperModelManager:
             self.loaded_models[model_name].unload()
 
     async def load_model(self, model_name: str) -> SelfDisposingModel[WhisperModel]:
+        logger.info(f"Model name: {model_name}")
         async with self._manager_lock:
             if model_name not in self._model_locks:
                 self._model_locks[model_name] = asyncio.Lock()
