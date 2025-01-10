@@ -182,6 +182,7 @@ async def transcribe_with_model(
             vad_filter=vad_filter,
             hotwords=hotwords,
             batch_size=batch_size,
+            condition_on_previous_text=false,
         )
         return segments, transcription_info
 
