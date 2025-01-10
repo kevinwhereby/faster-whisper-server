@@ -153,31 +153,35 @@ ModelName = Annotated[
 
 
 async def transcribe_with_model(
-    model_manager,
     audio,
-    model,
+    batch_size,
+    config,
+    hotwords,
     language,
+    model,
+    model_manager,
     prompt,
     temperature,
     vad_filter,
-    hotwords,
-    config,
 ):
     logger.info(f"Batched? {config.whisper.use_batched_mode}")
     async with await model_manager.load_model(model) as whisper:
         whisper_model = (
-            BatchedInferencePipeline(model=whisper)
+            BatchedInferencePipeline(
+                model=whisper,
+            )
             if config.whisper.use_batched_mode
             else whisper
         )
         segments, transcription_info = whisper_model.transcribe(
             audio,
-            task=Task.TRANSCRIBE,
-            language=language,
+            batch_size=batch_size,
+            hotwords=hotwords,
             initial_prompt=prompt,
+            language=language,
+            task=Task.TRANSCRIBE,
             temperature=temperature,
             vad_filter=vad_filter,
-            hotwords=hotwords,
         )
         return segments, transcription_info
 
@@ -192,17 +196,18 @@ async def transcribe_with_model(
     response_class=ORJSONResponse,  # Use ORJSONResponse for faster JSON serialization
 )
 async def transcribe_file(
-    config: ConfigDependency,
-    model_manager: ModelManagerDependency,
-    request: Request,
     audio: AudioFileDependency,
-    model: Annotated[ModelName | None, Form()] = None,
-    language: Annotated[Language | None, Form()] = None,
-    prompt: Annotated[str | None, Form()] = None,
-    response_format: Annotated[ResponseFormat | None, Form()] = None,
-    temperature: Annotated[float, Form()] = 0.0,
-    stream: Annotated[bool, Form()] = False,
+    batch_size: Annotated[bool, Form()] = 16,
+    config: ConfigDependency,
     hotwords: Annotated[str | None, Form()] = None,
+    language: Annotated[Language | None, Form()] = None,
+    model: Annotated[ModelName | None, Form()] = None,
+    model_manager: ModelManagerDependency,
+    prompt: Annotated[str | None, Form()] = None,
+    request: Request,
+    response_format: Annotated[ResponseFormat | None, Form()] = None,
+    stream: Annotated[bool, Form()] = False,
+    temperature: Annotated[float, Form()] = 0.0,
     vad_filter: Annotated[bool, Form()] = False,
 ) -> Response | StreamingResponse:
     if model is None:
@@ -214,15 +219,16 @@ async def transcribe_file(
 
     with timing("Model loading and transcription"):
         segments, transcription_info = await transcribe_with_model(
-            model_manager,
             audio,
-            model,
+            batch_size,
+            config,
+            hotwords,
             language,
+            model,
+            model_manager,
             prompt,
             temperature,
             vad_filter,
-            hotwords,
-            config,
         )
 
     logger.info(f"Segments: {segments}")
