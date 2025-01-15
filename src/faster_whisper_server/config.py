@@ -165,7 +165,7 @@ class WhisperConfig(BaseModel):
     """
     inference_device: Device = Field(default=Device.CUDA)
     device_index: int | list[int] = 0
-    compute_type: Quantization = Field(default=Quantization.FLOAT16)
+    compute_type: Quantization = Field(default=Quantization.AUTO)
     cpu_threads: int = 0
     num_workers: int = 2
     ttl: int = Field(default=300, ge=-1)
